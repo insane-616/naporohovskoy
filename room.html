@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бронирование номера — На Пороховской</title>
+
+    <script>
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.addEventListener('load', function () {
+            window.scrollTo(0, 0);
+        });
+
+        var ROOMS = {
+            'standard-double': {
+                name: 'Стандарт Double',
+                area: '20 м²',
+                price: 4000,
+                image: 'Стандарт Double.jpg',
+                desc: 'Уютный, светлый номер с видом на внутренний дворик. Выдержан в пастельных тонах с визуальными акцентами.',
+                features: [
+                    'Двуспальная кровать',
+                    'Кондиционер',
+                    'Wi-Fi',
+                    'Телевизор',
+                    'Санузел с душем',
+                    'Фен',
+                    'Мини-бар'
+                ]
+            },
+            'standard-twin': {
+                name: 'Стандарт Twin',
+                area: '22 м²',
+                price: 5000,
+                image: 'Стандарт Twin.jpg',
+                desc: 'Просторный номер с двумя отдельными кроватями, идеально для коллег и деловых поездок.',
+                features: [
+                    'Две односпальные кровати',
+                    'Кондиционер',
+                    'Wi-Fi',
+                    'Телевизор',
+                    'Санузел с душем',
+                    'Рабочий стол',
+                    'Мини-бар'
+                ]
+            },
+            'lux': {
+                name: 'Люкс',
+                area: '45 м²',
+                price: 10000,
+                image: 'Люкс.jpg',
+                desc: 'Двухкомнатные роскошные апартаменты с гостиной, спальней и джакузи для истинных ценителей.',
+                features: [
+                    'Спальня + гостиная',
+                    'Джакузи',
+                    'Кондиционер',
+                    'Wi-Fi',
+                    'Телевизор',
+                    'Халаты и тапочки',
+                    'Кофемашина',
+                    'Мини-бар'
+                ]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var params = new URLSearchParams(window.location.search);
+            var key = params.get('room') || 'standard-double';
+            var room = ROOMS[key] || ROOMS['standard-double'];
+
+            var urlCheckin = params.get('checkin') || '';
+            var urlCheckout = params.get('checkout') || '';
+            var urlAdults = params.get('adults') || '2';
+            var urlChildren = params.get('children') || '0';
+
+            document.title = room.name + ' — Бронирование — На Пороховской';
+            document.getElementById('room-name').textContent = room.name;
+            document.getElementById('room-area').textContent = room.area;
+            document.getElementById('room-desc').textContent = room.desc;
+            document.getElementById('price-per-night').textContent = room.price.toLocaleString('ru-RU') + ' ₽';
+
+            var mainImage = document.getElementById('room-image');
+            mainImage.src = room.image;
+            mainImage.alt = room.name;
+
+            var featuresList = document.getElementById('room-features');
+            featuresList.innerHTML = '';
+            room.features.forEach(function (f) {
+                var li = document.createElement('li');
+                li.textContent = f;
+                featuresList.appendChild(li);
+            });
+
+            var checkin = document.getElementById('checkin');
+            var checkout = document.getElementById('checkout');
+            var adults = document.getElementById('adults');
+            var children = document.getElementById('children');
+
+            var today = new Date().toISOString().split('T')[0];
+            checkin.min = today;
+            checkout.min = today;
+
+            if (urlCheckin) {
+                checkin.value = urlCheckin;
+                var nextDay = new Date(urlCheckin);
+                nextDay.setDate(nextDay.getDate() + 1);
+                checkout.min = nextDay.toISOString().split('T')[0];
+            }
+            if (urlCheckout) checkout.value = urlCheckout;
+            if (urlAdults) adults.value = urlAdults;
+            if (urlChildren) children.value = urlChildren;
+
+            function calcTotal() {
+                var totalEl = document.getElementById('total-price');
+                var nightsEl = document.getElementById('nights-count');
+                if (!checkin.value || !checkout.value) {
+                    totalEl.textContent = '—';
+                    nightsEl.textContent = '—';
+                    return;
+                }
+                var d1 = new Date(checkin.value);
+                var d2 = new Date(checkout.value);
+                var nights = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+                if (nights <= 0) {
+                    totalEl.textContent = '—';
+                    nightsEl.textContent = '—';
+                    return;
+                }
+                nightsEl.textContent = nights;
+                totalEl.textContent = (nights * room.price).toLocaleString('ru-RU') + ' ₽';
+            }
+
+            checkin.addEventListener('change', function () {
+                if (this.value) {
+                    var nextDay = new Date(this.value);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    checkout.min = nextDay.toISOString().split('T')[0];
+                    if (checkout.value && checkout.value <= this.value) {
+                        checkout.value = '';
+                    }
+                }
+                calcTotal();
+            });
+            checkout.addEventListener('change', calcTotal);
+
+            calcTotal();
+
+            var phoneInput = document.getElementById('guest-phone');
+
+            if (!phoneInput.value || phoneInput.value.trim() === '' || phoneInput.value === '+7') {
+                phoneInput.value = '+7 ';
+            }
+
+            function formatPhone() {
+                var digits = phoneInput.value.replace(/\D/g, '');
+                if (digits.startsWith('7') || digits.startsWith('8')) {
+                    digits = digits.substring(1);
+                }
+                digits = digits.substring(0, 10);
+
+                var result = '+7';
+                if (digits.length > 0) result += ' (' + digits.substring(0, 3);
+                if (digits.length >= 3) result += ')';
+                if (digits.length > 3) result += ' ' + digits.substring(3, 6);
+                if (digits.length > 6) result += '-' + digits.substring(6, 8);
+                if (digits.length > 8) result += '-' + digits.substring(8, 10);
+
+                phoneInput.value = result;
+            }
+
+            phoneInput.addEventListener('keydown', function (e) {
+                var allowedKeys = [
+                    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+                    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                    'Home', 'End'
+                ];
+                if (allowedKeys.indexOf(e.key) !== -1) {
+                    if ((e.key === 'Backspace' || e.key === 'Delete')
+                        && this.selectionStart <= 3 && this.selectionEnd <= 3) {
+                        e.preventDefault();
+                    }
+                    return;
+                }
+                if (e.ctrlKey || e.metaKey) return;
+                if (!/^[0-9]$/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            phoneInput.addEventListener('input', formatPhone);
+
+            phoneInput.addEventListener('focus', function () {
+                if (!this.value || this.value === '+7') {
+                    this.value = '+7 ';
+                }
+            });
+
+            phoneInput.addEventListener('blur', function () {
+                if (this.value.trim() === '' || this.value === '+7') {
+                    this.value = '+7 ';
+                }
+            });
+        });
+
+        function submitBooking() {
+            var checkin = document.getElementById('checkin').value;
+            var checkout = document.getElementById('checkout').value;
+            var adults = document.getElementById('adults').value;
+            var children = document.getElementById('children').value;
+            var name = document.getElementById('guest-name').value.trim();
+            var phone = document.getElementById('guest-phone').value.trim();
+
+            if (!checkin || !checkout) {
+                alert('Пожалуйста, выберите даты заезда и выезда.');
+                return;
+            }
+            if (!name) {
+                alert('Пожалуйста, укажите имя.');
+                return;
+            }
+
+            var phoneDigits = phone.replace(/\D/g, '');
+            if (phoneDigits.length < 11) {
+                alert('Пожалуйста, укажите полный номер телефона.');
+                return;
+            }
+
+            alert('Спасибо, ' + name + '! Ваша заявка принята.\n\n' +
+                  'Заезд: ' + checkin + '\n' +
+                  'Выезд: ' + checkout + '\n' +
+                  'Гостей: ' + adults + ' взр., ' + children + ' дет.\n\n' +
+                  'Мы свяжемся с вами по номеру ' + phone + ' для подтверждения.');
+        }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #fbf9f6;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-family: Georgia, serif;
+            font-weight: 400;
+        }
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        img {
+            display: block;
+            max-width: 100%;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .back-link {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #991b1b;
+            border-bottom: 1px solid transparent;
+        }
+        .back-link:hover {
+            border-color: #991b1b;
+        }
+        .room-page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 40px 96px;
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 48px;
+            align-items: start;
+        }
+        .room-gallery img.main {
+            width: 100%;
+            height: 480px;
+            object-fit: cover;
+            border: 1px solid #f0f0f0;
+        }
+        .room-info h1 {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        .room-info .meta {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 24px;
+        }
+        .room-info .desc {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #555;
+            margin-bottom: 32px;
+        }
+        .room-info h3 {
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+        .room-features {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 24px;
+            margin-bottom: 32px;
+        }
+        .room-features li {
+            font-size: 14px;
+            color: #555;
+            padding-left: 22px;
+            position: relative;
+        }
+        .room-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #991b1b;
+            font-weight: 600;
+        }
+        .booking-form {
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-top: 4px solid #991b1b;
+            padding: 32px;
+            position: sticky;
+            top: 110px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .booking-form h2 {
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+        .form-field {
+            margin-bottom: 16px;
+        }
+        .form-field label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            border: 1px solid #e5e5e5;
+            background: #fafafa;
+            font-family: inherit;
+            font-size: 14px;
+            color: #333;
+            padding: 10px 12px;
+            border-radius: 2px;
+            outline: none;
+        }
+        .form-field input:focus,
+        .form-field select:focus {
+            border-color: #991b1b;
+            background: #fff;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .price-summary {
+            border-top: 1px solid #f0f0f0;
+            margin-top: 24px;
+            padding-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+        .price-summary .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .price-summary .total {
+            font-size: 16px;
+            color: #111;
+            font-weight: 600;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .price-summary .total span:last-child {
+            color: #991b1b;
+        }
+        .submit-btn {
+            width: 100%;
+            background: #991b1b;
+            color: #fff;
+            padding: 14px;
+            font-size: 13px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-top: 24px;
+        }
+        .submit-btn:hover {
+            background: #7a1414;
+        }
+        .form-note {
+            font-size: 11px;
+            color: #999;
+            margin-top: 12px;
+            line-height: 1.5;
+            text-align: center;
+        }
+        footer {
+            background: #4a1723;
+            color: #fff;
+            padding: 64px 40px 0;
+        }
+        .footer-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 40px;
+            border-bottom: 1px solid #6a2a3b;
+            padding-bottom: 40px;
+            margin-bottom: 40px;
+        }
+        .footer-grid .logo {
+            margin-bottom: 16px;
+        }
+        .footer-grid p {
+            font-size: 12px;
+            opacity: 0.6;
+            line-height: 1.7;
+            max-width: 360px;
+        }
+        .footer-grid h5 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .footer-grid ul {
+            list-style: none;
+        }
+        .footer-grid li {
+            font-size: 14px;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            opacity: 0.5;
+            padding-bottom: 40px;
+        }
+        .footer-bottom .links {
+            display: flex;
+            gap: 16px;
+        }
+        @media (max-width: 900px) {
+            .room-page { grid-template-columns: 1fr; padding: 24px 20px 64px; }
+            .room-gallery img.main { height: 280px; }
+            .room-info h1 { font-size: 28px; }
+            .room-features { grid-template-columns: 1fr; }
+            .booking-form { position: static; }
+            .footer-grid { grid-template-columns: 1fr; }
+            header { padding: 16px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="index.html" class="logo">На Пороховской</a>
+    <div class="header-right">
+        <a href="tel:+79032280033" class="phone">+7 (903) 228-00-33</a>
+        <a href="index.html#rooms" class="back-link">← Назад к номерам</a>
+    </div>
+</header>
+
+<main class="room-page">
+    <div>
+        <div class="room-gallery">
+            <img id="room-image" class="main" src="Стандарт Double.jpg" alt="Номер">
+        </div>
+
+        <div class="room-info" style="margin-top: 32px;">
+            <h1 id="room-name">Стандарт Double</h1>
+            <p class="meta">Площадь: <span id="room-area">20 м²</span></p>
+            <p class="desc" id="room-desc"></p>
+
+            <h3>В номере</h3>
+            <ul class="room-features" id="room-features"></ul>
+        </div>
+    </div>
+
+    <aside class="booking-form">
+        <h2>Бронирование</h2>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label for="checkin">Заезд</label>
+                <input type="date" id="checkin">
+            </div>
+            <div class="form-field">
+                <label for="checkout">Выезд</label>
+                <input type="date" id="checkout">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label for="adults">Взрослые</label>
+                <select id="adults">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="children">Дети</label>
+                <select id="children">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-field">
+            <label for="guest-name">Имя и фамилия</label>
+            <input type="text" id="guest-name" placeholder="Иван Иванов">
+        </div>
+
+        <div class="form-field">
+            <label for="guest-phone">Телефон</label>
+            <input type="tel" id="guest-phone" value="+7 " maxlength="18" placeholder="+7 (___) ___-__-__">
+        </div>
+
+        <div class="price-summary">
+            <div class="row">
+                <span>Цена за ночь</span>
+                <span id="price-per-night">4 000 ₽</span>
+            </div>
+            <div class="row">
+                <span>Количество ночей</span>
+                <span id="nights-count">—</span>
+            </div>
+            <div class="row total">
+                <span>Итого</span>
+                <span id="total-price">—</span>
+            </div>
+        </div>
+
+        <button class="submit-btn" onclick="submitBooking()">Забронировать</button>
+        <p class="form-note">Нажимая кнопку, вы соглашаетесь с условиями бронирования. Менеджер свяжется с вами для подтверждения.</p>
+    </aside>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div>
+            <div class="logo">На Пороховской</div>
+            <p>Уникальная гостиница, возрождающая традиции гостеприимства и утонченного классического комфорта.</p>
+        </div>
+        <div>
+            <h5>Разделы</h5>
+            <ul>
+                <li><a href="index.html#about">О гостинице</a></li>
+                <li><a href="index.html#services">Услуги и сервис</a></li>
+                <li><a href="index.html#rooms">Наши номера</a></li>
+                <li><a href="#">Галерея</a></li>
+            </ul>
+        </div>
+        <div>
+            <h5>Контакты</h5>
+            <ul>
+                <li>г. Волоколамск, ул. Пороховская, д. 1А</li>
+                <li><a href="mailto:naporohovskoy@yandex.ru">naporohovskoy@yandex.ru</a></li>
+                <li>+7 (903) 228-00-33</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2026 Гостиница «На Пороховской». Все права защищены.</p>
+        <div class="links">
+            <a href="privacy.html">Политика конфиденциальности</a>
+            <a href="offer.html">Договор оферты</a>
+        </div>
+    </div>
+</footer>
+</body>
+</html>
